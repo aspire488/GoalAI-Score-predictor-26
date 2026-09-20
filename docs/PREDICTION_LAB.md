@@ -58,3 +58,28 @@ Run the type-check plus model checks with:
 ```bash
 npm run test:lab
 ```
+
+
+## Robustness analysis
+
+The Lab also exposes a robustness layer around the baseline experiment.
+
+### Confidence intervals
+
+Win/draw/loss estimates include **95% Wilson score intervals**. These quantify sampling uncertainty from the finite Monte Carlo run; they do not measure uncertainty in the underlying football model.
+
+### Sensitivity scenarios
+
+The Lab evaluates controlled perturbations around the same fixture:
+
+- **Attack +5%** — increases Team A's squad-form multiplier by 5%.
+- **Opponent output +5%** — increases Team B's tactical multiplier by 5%.
+- **Attack -5%** — decreases Team A's squad-form multiplier by 5%.
+
+Each scenario is compared against the baseline outcome distribution. The displayed deltas show how sensitive the result is to those controlled changes.
+
+### Stability score
+
+The stability score compresses the largest observed outcome-probability swing into a bounded 0–100% indicator. It is an engineering diagnostic for sensitivity, **not a measure of real-world prediction accuracy**.
+
+The self-test validates interval bounds, scenario completeness, and stability-score bounds in addition to deterministic baseline reproducibility.
