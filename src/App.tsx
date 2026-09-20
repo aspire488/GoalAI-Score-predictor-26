@@ -5,6 +5,7 @@ import PredictionHistory from './components/PredictionHistory';
 import AccuracyDashboard from './components/AccuracyDashboard';
 import TournamentSimulator from './components/TournamentSimulator';
 import HistoricalExplorer from './components/HistoricalExplorer';
+import PredictionLab from './components/PredictionLab';
 import { StoredPrediction } from './types';
 import { Swords, History, BarChart3, Trophy, Star, Info, ChevronDown, BookOpen } from 'lucide-react';
 
@@ -109,7 +110,7 @@ function migratePredictions(raw: any[]): StoredPrediction[] {
 }
 
 export default function App() {
-  const [activeTab, setActiveTab2] = useState<'predict' | 'tournament' | 'history' | 'explorer'>('predict');
+  const [activeTab, setActiveTab2] = useState<'predict' | 'tournament' | 'history' | 'explorer' | 'lab'>('predict');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -259,6 +260,17 @@ export default function App() {
                 <span className="absolute bottom-[-17px] left-0 right-0 h-[2.5px] bg-[#A3E635] rounded-full animate-fade-in" />
               )}
             </button>
+            <button
+              onClick={() => setActiveTab2('lab')}
+              className={`pb-1 transition-colors relative focus:outline-none ${
+                activeTab === 'lab' ? 'text-[#06B6D4]' : 'text-slate-400 hover:text-[#06B6D4]'
+              }`}
+            >
+              Prediction Lab
+              {activeTab === 'lab' && (
+                <span className="absolute bottom-[-17px] left-0 right-0 h-[2.5px] bg-[#A3E635] rounded-full animate-fade-in" />
+              )}
+            </button>
           </nav>
 
           {/* Mobile Tab Select Dropdown */}
@@ -273,6 +285,7 @@ export default function App() {
                 {activeTab === 'tournament' && "Tournament"}
                 {activeTab === 'history' && "History"}
                 {activeTab === 'explorer' && "Explorer"}
+                {activeTab === 'lab' && "Prediction Lab"}
               </span>
               <ChevronDown className="w-4 h-4 text-slate-400" />
             </button>
@@ -327,6 +340,17 @@ export default function App() {
                   >
                     Explorer
                   </button>
+                  <button
+                    onClick={() => {
+                      setActiveTab2('lab');
+                      setIsDropdownOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-outfit text-left transition-colors cursor-pointer select-none ${
+                      activeTab === 'lab' ? 'bg-[#A3E635] text-slate-950 font-bold' : 'text-slate-300 hover:bg-[#05070B]'
+                    }`}
+                  >
+                    Prediction Lab
+                  </button>
                 </div>
               </div>
             )}
@@ -369,6 +393,7 @@ export default function App() {
           {activeTab === 'explorer' && (
             <HistoricalExplorer teams={TEAMS} />
           )}
+          {activeTab === 'lab' && <PredictionLab />}
         </div>
       </main>
 
