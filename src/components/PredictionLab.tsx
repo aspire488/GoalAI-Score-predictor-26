@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { BarChart3, FlaskConical, RefreshCw, ShieldCheck, Sparkles } from 'lucide-react';
 import { ENRICHED_TEAMS } from '../utils/predictor';
-import { PredictionLabResult, runPredictionLab, verifyLabInvariants } from '../utils/predictionLab';
+import { PredictionLabResult, RobustnessReport, analyzePredictionRobustness, runPredictionLab, verifyLabInvariants } from '../utils/predictionLab';
 import TeamSelect from './TeamSelect';
 
 const fmtPct = (n: number) => `${(n * 100).toFixed(1)}%`;
@@ -12,9 +12,14 @@ export default function PredictionLab() {
   const [simulations, setSimulations] = useState(10000);
   const [seed, setSeed] = useState(20260920);
   const [result, setResult] = useState<PredictionLabResult | null>(null);
+  const [robustness, setRobustness] = useState<RobustnessReport | null>(null);
 
   const teams = useMemo(() => ENRICHED_TEAMS, []);
-  const run = () => setResult(runPredictionLab({ teamA, teamB, simulations, seed }));
+  const run = () => {
+    const config = { teamA, teamB, simulations, seed };
+    setResult(runPredictionLab(config));
+    setRobustness(analyzePredictionRobustness(config));
+  };
   const errors = result ? verifyLabInvariants(result) : [];
 
   return (
@@ -127,6 +132,46 @@ export default function PredictionLab() {
               </div>
             </div>
           </section>
+
+          {robustness && (
+            <section className="bg-[#0B0F19] border border-[#1E293B] rounded-2xl p-5">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-5">
+                <div>
+                  <h3 className="text-sm font-bold text-white">Robustness & Sensitivity</h3>
+                  <p className="text-[10px] text-slate-500 mt-1">95% Wilson intervals and controlled ±5% model perturbations.</p>
+                </div>
+                <div className="text-right">
+                  <div className="text-[9px] uppercase font-mono text-slate-500">Stability Score</div>
+                  <div className="text-lg font-black text-cyan-400">{(robustness.stabilityScore * 100).toFixed(1)}%</div>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-5">
+                {([
+                  ['Team A', robustness.outcomeIntervals.winA],
+                  ['Draw', robustness.outcomeIntervals.draw],
+                  ['Team B', robustness.outcomeIntervals.winB]
+                ] as const).map(([label, interval]) => (
+                  <div key={label} className="bg-[#05070B] border border-[#1E293B] rounded-xl p-3">
+                    <div className="text-[9px] uppercase font-mono text-slate-500">{label} 95% interval</div>
+                    <div className="text-white font-mono text-sm mt-1">{fmtPct(interval.lower)} — {fmtPct(interval.upper)}</div>
+                    <div className="text-[9px] text-slate-600 mt-1">estimate {fmtPct(interval.estimate)}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="space-y-3">
+                {robustness.scenarios.map(scenario => (
+                  <div key={scenario.name} className="grid grid-cols-[110px_1fr_auto] gap-3 items-center bg-[#05070B] border border-[#1E293B] rounded-lg p-3">
+                    <div>
+                      <div className="text-[10px] font-bold text-white">{scenario.name}</div>
+                      <div className="text-[8px] text-slate-600">{scenario.description}</div>
+                    </div>
+                    <div className="text-[10px] font-mono text-slate-400">A {fmtPct(scenario.winA)} · D {fmtPct(scenario.draw)} · B {fmtPct(scenario.winB)}</div>
+                    <div className="text-[9px] font-mono text-cyan-400">ΔA {scenario.deltaWinA >= 0 ? '+' : ''}{fmtPct(scenario.deltaWinA)}</div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
 
           <section className="bg-[#0B0F19] border border-[#1E293B] rounded-2xl p-5">
             <h3 className="text-sm font-bold text-white mb-4">Goal Distribution</h3>
