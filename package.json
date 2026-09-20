@@ -7,7 +7,9 @@
     "dev": "vite --host 0.0.0.0 --port 3000",
     "build": "vite build",
     "clean": "rm -rf dist",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "test:model": "tsx src/utils/predictionLab.selftest.ts",
+    "test:lab": "npm run lint && npm run test:model"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
