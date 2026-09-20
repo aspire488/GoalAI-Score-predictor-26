@@ -14,6 +14,8 @@ GoalAI now includes a reproducible **Prediction Intelligence Lab** built on top 
 
 Same inputs + same seed produce the same experiment, making the numerical layer testable and reproducible.
 
+The Lab also exposes **95% Wilson confidence intervals**, controlled sensitivity scenarios, and a bounded stability diagnostic so users can inspect how much a prediction moves when model inputs are perturbed.
+
 See [`docs/PREDICTION_LAB.md`](docs/PREDICTION_LAB.md) for the model contract and interpretation notes.
 
 ## Run Locally
