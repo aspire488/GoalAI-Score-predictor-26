@@ -152,6 +152,106 @@ export function runPredictionLab(config: LabConfig): PredictionLabResult {
   };
 }
 
+export interface ProbabilityInterval {
+  estimate: number;
+  lower: number;
+  upper: number;
+}
+
+export interface SensitivityScenario {
+  name: string;
+  description: string;
+  winA: number;
+  draw: number;
+  winB: number;
+  deltaWinA: number;
+  deltaDraw: number;
+  deltaWinB: number;
+}
+
+export interface RobustnessReport {
+  baseline: PredictionLabResult;
+  outcomeIntervals: {
+    winA: ProbabilityInterval;
+    draw: ProbabilityInterval;
+    winB: ProbabilityInterval;
+  };
+  scenarios: SensitivityScenario[];
+  stabilityScore: number;
+}
+
+function wilsonInterval(successes: number, trials: number, z = 1.96): ProbabilityInterval {
+  const p = successes / trials;
+  const denominator = 1 + (z * z) / trials;
+  const centre = (p + (z * z) / (2 * trials)) / denominator;
+  const margin = (z / denominator) * Math.sqrt((p * (1 - p) / trials) + (z * z) / (4 * trials * trials));
+  return {
+    estimate: p,
+    lower: Math.max(0, centre - margin),
+    upper: Math.min(1, centre + margin)
+  };
+}
+
+export function analyzePredictionRobustness(config: LabConfig): RobustnessReport {
+  const baseline = runPredictionLab(config);
+  const scenarios: Array<{ name: string; description: string; patch: Partial<LabConfig> }> = [
+    {
+      name: 'Attack +5%',
+      description: 'Team A attacking output increased by 5%.',
+      patch: { squadFormMultiplierA: (config.squadFormMultiplierA ?? 1) * 1.05 }
+    },
+    {
+      name: 'Defense +5%',
+      description: 'Team B defensive multiplier increased by 5%.',
+      patch: { tacticalSetupMultiplierB: (config.tacticalSetupMultiplierB ?? 1) * 1.05 }
+    },
+    {
+      name: 'Attack -5%',
+      description: 'Team A attacking output reduced by 5%.',
+      patch: { squadFormMultiplierA: (config.squadFormMultiplierA ?? 1) * 0.95 }
+    }
+  ];
+
+  const evaluated = scenarios.map((scenario, index) => {
+    const result = runPredictionLab({
+      ...config,
+      ...scenario.patch,
+      seed: (config.seed ?? 20260920) + index + 1
+    });
+    return {
+      name: scenario.name,
+      description: scenario.description,
+      winA: result.outcomeProbabilities.winA,
+      draw: result.outcomeProbabilities.draw,
+      winB: result.outcomeProbabilities.winB,
+      deltaWinA: result.outcomeProbabilities.winA - baseline.outcomeProbabilities.winA,
+      deltaDraw: result.outcomeProbabilities.draw - baseline.outcomeProbabilities.draw,
+      deltaWinB: result.outcomeProbabilities.winB - baseline.outcomeProbabilities.winB
+    };
+  });
+
+  const maxSwing = Math.max(
+    ...evaluated.flatMap(s => [Math.abs(s.deltaWinA), Math.abs(s.deltaDraw), Math.abs(s.deltaWinB)])
+  );
+  const stabilityScore = Math.max(0, 1 - Math.min(1, maxSwing * 5));
+
+  const n = baseline.simulations;
+  const winA = Math.round(baseline.outcomeProbabilities.winA * n);
+  const draw = Math.round(baseline.outcomeProbabilities.draw * n);
+  const winB = n - winA - draw;
+
+  return {
+    baseline,
+    outcomeIntervals: {
+      winA: wilsonInterval(winA, n),
+      draw: wilsonInterval(draw, n),
+      winB: wilsonInterval(winB, n)
+    },
+    scenarios: evaluated,
+    stabilityScore
+  };
+}
+
 export function verifyLabInvariants(result: PredictionLabResult): string[] {
   const errors: string[] = [];
   const outcomeSum = result.outcomeProbabilities.winA + result.outcomeProbabilities.draw + result.outcomeProbabilities.winB;
